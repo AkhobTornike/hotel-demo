@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CreditCard, Money, ArrowUp, ArrowDown, X, Check } from "@phosphor-icons/react";
+import { Money, ArrowUp, ArrowDown, X, Check } from "@phosphor-icons/react";
 
 const PAYMENTS = [
   { id: "TX-8821", date: "28 ივნ 14:22", guest: "გიორგი მამულაშვილი", reservation: "JV-1042", method: "ბარათი", amount: "₾180", status: "paid" },

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
 
 export type GeoFont = "noto-sans-geo" | "noto-serif-geo" | "firago";
 export type LatinFont = "geist" | "jakarta" | "ibm-plex";
@@ -11,13 +11,6 @@ interface FontContextValue {
   setGeoFont: (f: GeoFont) => void;
   setLatinFont: (f: LatinFont) => void;
 }
-
-const FontContext = createContext<FontContextValue>({
-  geoFont: "noto-sans-geo",
-  latinFont: "geist",
-  setGeoFont: () => {},
-  setLatinFont: () => {},
-});
 
 const GEO_VAR: Record<GeoFont, string> = {
   "noto-sans-geo": "var(--font-noto-sans-geo)",
@@ -31,39 +24,62 @@ const LATIN_VAR: Record<LatinFont, string> = {
   "ibm-plex": "var(--font-ibm-plex)",
 };
 
+const DEFAULT_GEO: GeoFont = "noto-sans-geo";
+const DEFAULT_LATIN: LatinFont = "geist";
+
+const FontContext = createContext<FontContextValue>({
+  geoFont: DEFAULT_GEO,
+  latinFont: DEFAULT_LATIN,
+  setGeoFont: () => {},
+  setLatinFont: () => {},
+});
+
+/* ── localStorage-backed store ──
+   Read through useSyncExternalStore rather than a setState-in-effect, so the persisted
+   choice is picked up on mount without a cascading render or a hydration mismatch. */
+const listeners = new Set<() => void>();
+
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
+  return () => listeners.delete(onChange);
+}
+
+function read<T extends string>(key: string, allowed: Record<T, string>, fallback: T): T {
+  const saved = localStorage.getItem(key);
+  return saved && saved in allowed ? (saved as T) : fallback;
+}
+
+const getGeo = () => read("font-geo", GEO_VAR, DEFAULT_GEO);
+const getLatin = () => read("font-latin", LATIN_VAR, DEFAULT_LATIN);
+const getServerGeo = () => DEFAULT_GEO;
+const getServerLatin = () => DEFAULT_LATIN;
+
+function setGeoFont(f: GeoFont) {
+  localStorage.setItem("font-geo", f);
+  listeners.forEach((l) => l());
+}
+
+function setLatinFont(f: LatinFont) {
+  localStorage.setItem("font-latin", f);
+  listeners.forEach((l) => l());
+}
+
 export function FontProvider({ children }: { children: React.ReactNode }) {
-  const [geoFont, setGeoFontState] = useState<GeoFont>("noto-sans-geo");
-  const [latinFont, setLatinFontState] = useState<LatinFont>("geist");
+  const geoFont = useSyncExternalStore(subscribe, getGeo, getServerGeo);
+  const latinFont = useSyncExternalStore(subscribe, getLatin, getServerLatin);
 
   useEffect(() => {
-    const savedGeo = localStorage.getItem("font-geo") as GeoFont | null;
-    const savedLatin = localStorage.getItem("font-latin") as LatinFont | null;
-    if (savedGeo) setGeoFontState(savedGeo);
-    if (savedLatin) setLatinFontState(savedLatin);
-  }, []);
+    const root = document.documentElement.style;
+    root.setProperty("--font-ui", GEO_VAR[geoFont]);
+    root.setProperty("--font-latin", LATIN_VAR[latinFont]);
+  }, [geoFont, latinFont]);
 
-  useEffect(() => {
-    document.documentElement.style.setProperty("--font-ui", GEO_VAR[geoFont]);
-  }, [geoFont]);
-
-  useEffect(() => {
-    document.documentElement.style.setProperty("--font-latin", LATIN_VAR[latinFont]);
-  }, [latinFont]);
-
-  function setGeoFont(f: GeoFont) {
-    setGeoFontState(f);
-    localStorage.setItem("font-geo", f);
-  }
-  function setLatinFont(f: LatinFont) {
-    setLatinFontState(f);
-    localStorage.setItem("font-latin", f);
-  }
-
-  return (
-    <FontContext.Provider value={{ geoFont, latinFont, setGeoFont, setLatinFont }}>
-      {children}
-    </FontContext.Provider>
+  const value = useMemo(
+    () => ({ geoFont, latinFont, setGeoFont, setLatinFont }),
+    [geoFont, latinFont],
   );
+
+  return <FontContext.Provider value={value}>{children}</FontContext.Provider>;
 }
 
 export function useFont() {

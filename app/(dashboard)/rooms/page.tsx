@@ -91,7 +91,7 @@ export default function RoomsPage() {
           return (
             <div key={r.id} onClick={() => setModal(r)} style={{
               background: "var(--panel)",
-              border: `1.5px solid ${r.status === "free" ? "var(--bdr)" : st.dot}`,
+              border: `1.5px solid ${st.dot}`,
               borderRadius: 12, padding: 16, cursor: "pointer",
             }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: "var(--txt)", marginBottom: 2, fontFamily: "monospace" }}>{r.id}</div>

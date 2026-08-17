@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   Users, Door, CreditCard, TrendUp, X, Check,
-  CalendarBlank, Clock, Phone, EnvelopeSimple,
+  CalendarBlank, Clock,
 } from "@phosphor-icons/react";
 
 const STATS = [
@@ -23,7 +23,7 @@ const RESERVATIONS = [
 
 const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
   in:      { label: "სასტუმროში", color: "var(--acc-txt)", bg: "var(--acc-s)" },
-  ok:      { label: "დადასტურებული", color: "var(--blue-txt, #1E40AF)", bg: "var(--blue-s)" },
+  ok:      { label: "დადასტურებული", color: "var(--blue-txt)", bg: "var(--blue-s)" },
   pending: { label: "მოლოდინში", color: "var(--amb-txt)", bg: "var(--amb-s)" },
 };
 

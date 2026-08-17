@@ -42,24 +42,27 @@
   --acc-txt: #065F46;
   --amb: #F59E0B;
   --amb-s: rgba(245,158,11,.1);
+  --amb-txt: #92400E;
   --rose: #EF4444;
   --rose-s: rgba(239,68,68,.1);
+  --rose-txt: #991B1B;
   --blue: #3B82F6;
   --blue-s: rgba(59,130,246,.1);
+  --blue-txt: #1E40AF;
+  --gray-s: #F3F4F6;
+  --gray-txt: #6B7280;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
 
 body {
-  font-family: var(--font-ui), 'Noto Sans Georgian', sans-serif;
+  /* --font-latin comes first so Latin/digits use the chosen Latin face; it carries no
+     Georgian glyphs, so Georgian text falls through to --font-ui. Both are set by FontProvider. */
+  font-family: var(--font-latin), var(--font-ui), 'Noto Sans Georgian', sans-serif;
   background: var(--bg);
   color: var(--txt);
   font-size: 14px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
-}
-
-.font-mono-num {
-  font-family: 'JetBrains Mono', monospace;
 }

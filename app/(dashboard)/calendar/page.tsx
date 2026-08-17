@@ -3,22 +3,21 @@
 import { useState } from "react";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 
-const DAYS = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ", "კვი"];
-
-// Bookings for June 2026 (day ranges are 1-indexed)
+// Bookings for June 2026. `start`/`end` are day-of-June offsets used for grid placement —
+// they intentionally run past 30 for stays that end in July, so `label` carries the real date.
 const BOOKINGS = [
-  { id: "JV-1042", room: "204", guest: "გ. მამულაშვილი", start: 28, end: 30, color: "#10B981" },
-  { id: "JV-1041", room: "312", guest: "И. Петров",       start: 27, end: 29, color: "#3B82F6" },
-  { id: "JV-1040", room: "108", guest: "A. Müller",        start: 28, end: 31, color: "#8B5CF6" },
-  { id: "JV-1039", room: "215", guest: "ნ. კვარ.",         start: 29, end: 32, color: "#F59E0B" },
-  { id: "JV-1038", room: "401", guest: "მ. გელ.",          start: 30, end: 33, color: "#EF4444" },
-  { id: "JV-1036", room: "102", guest: "ნ. ბერ.",          start: 25, end: 27, color: "#10B981" },
-  { id: "JV-1035", room: "303", guest: "Y. Tanaka",        start: 20, end: 23, color: "#06B6D4" },
+  { id: "JV-1042", room: "204", guest: "გ. მამულაშვილი", start: 28, end: 30, checkout: "30 ივნ", color: "#10B981" },
+  { id: "JV-1041", room: "312", guest: "И. Петров",       start: 27, end: 29, checkout: "29 ივნ", color: "#3B82F6" },
+  { id: "JV-1040", room: "108", guest: "A. Müller",        start: 28, end: 31, checkout: "01 ივლ", color: "#8B5CF6" },
+  { id: "JV-1039", room: "215", guest: "ნ. კვარ.",         start: 29, end: 32, checkout: "02 ივლ", color: "#F59E0B" },
+  { id: "JV-1038", room: "401", guest: "მ. გელ.",          start: 30, end: 33, checkout: "03 ივლ", color: "#EF4444" },
+  { id: "JV-1036", room: "102", guest: "ნ. ბერ.",          start: 25, end: 27, checkout: "27 ივნ", color: "#10B981" },
+  { id: "JV-1035", room: "303", guest: "Y. Tanaka",        start: 20, end: 23, checkout: "23 ივნ", color: "#06B6D4" },
 ];
 
-// Render a simple weekly calendar view centered on June 28
+// Weekly view covering 23–30 June 2026, centered on Sunday the 28th.
 const WEEK_DAYS = [23, 24, 25, 26, 27, 28, 29, 30];
-const WEEK_LABELS = ["ორშ 23", "სამ 24", "ოთხ 25", "ხუთ 26", "პარ 27", "შაბ 28", "კვი 29", "ორშ 30"];
+const WEEK_LABELS = ["სამ 23", "ოთხ 24", "ხუთ 25", "პარ 26", "შაბ 27", "კვი 28", "ორშ 29", "სამ 30"];
 const ROOMS_LIST = ["101", "102", "108", "201", "204", "215", "301", "303", "312", "401"];
 
 export default function CalendarPage() {
@@ -109,7 +108,7 @@ export default function CalendarPage() {
             <div style={{ width: 40, height: 4, borderRadius: 2, background: selected.color, marginBottom: 16 }} />
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--txt)", marginBottom: 4 }}>{selected.guest}</div>
             <div style={{ fontSize: 13, color: "var(--txt3)", marginBottom: 16 }}>ოთახი {selected.room} &middot; {selected.id}</div>
-            <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 4 }}>ივნ {selected.start} &rarr; ივნ {selected.end}</div>
+            <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 4 }}>{selected.start} ივნ &rarr; {selected.checkout}</div>
             <button onClick={() => setSelected(null)} style={{ marginTop: 16, width: "100%", padding: "9px 0", borderRadius: 8, border: "none", background: "var(--bg)", fontSize: 13, color: "var(--txt2)", cursor: "pointer" }}>დახურვა</button>
           </div>
         </div>
