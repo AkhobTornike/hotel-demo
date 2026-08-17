@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, MagnifyingGlass, CalendarBlank, Users, Door, CreditCard, Check } from "@phosphor-icons/react";
+import { Plus, MagnifyingGlass, CalendarBlank, Users, Door, CreditCard, Check } from "@phosphor-icons/react";
+import Modal, { ModalHeader, ModalActions, GhostButton, PrimaryButton } from "@/components/Modal";
+import NewReservationModal, { type NewReservation } from "@/components/NewReservationModal";
 
-const ALL_RESERVATIONS = [
+const INITIAL_RESERVATIONS = [
   { id: "JV-1042", guest: "გიორგი მამულაშვილი", room: "204", type: "სტანდარტი", checkin: "28 ივნ", checkout: "30 ივნ", nights: 2, price: "₾180", status: "in" },
   { id: "JV-1041", guest: "Иван Петров",          room: "312", type: "სუიტი",     checkin: "27 ივნ", checkout: "29 ივნ", nights: 2, price: "₾340", status: "in" },
   { id: "JV-1040", guest: "Ana Müller",            room: "108", type: "სტანდარტი", checkin: "28 ივნ", checkout: "01 ივლ", nights: 3, price: "₾165", status: "in" },
@@ -23,28 +25,47 @@ const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> =
   cancel: { label: "გაუქმებული",    color: "#991B1B", bg: "rgba(239,68,68,.1)" },
 };
 
+type Reservation = (typeof INITIAL_RESERVATIONS)[0];
+
 export default function ReservationsPage() {
+  const [reservations, setReservations] = useState<Reservation[]>(INITIAL_RESERVATIONS);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [modal, setModal] = useState<typeof ALL_RESERVATIONS[0] | null>(null);
+  const [modal, setModal] = useState<Reservation | null>(null);
   const [newModal, setNewModal] = useState(false);
-  const [form, setForm] = useState({ guest: "", room: "", checkin: "", checkout: "", type: "სტანდარტი" });
+
+  function setStatus(id: string, status: string) {
+    setReservations((p) => p.map((r) => (r.id === id ? { ...r, status } : r)));
+    setModal(null);
+  }
+
+  function addReservation(r: NewReservation) {
+    const nextNum = 1043 + reservations.length - INITIAL_RESERVATIONS.length;
+    setReservations((p) => [
+      {
+        id: `JV-${nextNum}`, guest: r.guest, room: r.room || "—", type: r.type,
+        checkin: r.checkin || "—", checkout: r.checkout || "—", nights: 1, price: "—", status: "ok",
+      },
+      ...p,
+    ]);
+    setNewModal(false);
+  }
 
   const counts = {
-    in:     ALL_RESERVATIONS.filter(r => r.status === "in").length,
-    ok:     ALL_RESERVATIONS.filter(r => r.status === "ok").length,
-    done:   ALL_RESERVATIONS.filter(r => r.status === "done").length,
-    cancel: ALL_RESERVATIONS.filter(r => r.status === "cancel").length,
+    in:     reservations.filter(r => r.status === "in").length,
+    ok:     reservations.filter(r => r.status === "ok").length,
+    done:   reservations.filter(r => r.status === "done").length,
+    cancel: reservations.filter(r => r.status === "cancel").length,
   };
 
-  const filtered = ALL_RESERVATIONS.filter((r) => {
+  const filtered = reservations.filter((r) => {
     const mf = filter === "all" || r.status === filter;
     const ms = r.guest.toLowerCase().includes(search.toLowerCase()) || r.id.includes(search) || r.room.includes(search);
     return mf && ms;
   });
 
   const FILTERS = [
-    { key: "all",    label: `ყველა (${ALL_RESERVATIONS.length})` },
+    { key: "all",    label: `ყველა (${reservations.length})` },
     { key: "in",     label: `სასტუმროში (${counts.in})` },
     { key: "ok",     label: `დადასტურებული (${counts.ok})` },
     { key: "done",   label: `დასრულებული (${counts.done})` },
@@ -56,7 +77,7 @@ export default function ReservationsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--txt)" }}>ჯავშნები</h1>
-          <p style={{ fontSize: 13, color: "var(--txt3)", marginTop: 2 }}>{ALL_RESERVATIONS.length} ჯავშანი სულ</p>
+          <p style={{ fontSize: 13, color: "var(--txt3)", marginTop: 2 }}>{reservations.length} ჯავშანი სულ</p>
         </div>
         <button onClick={() => setNewModal(true)} style={{ background: "var(--acc)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
           <Plus size={14} weight="bold" /> ახალი ჯავშანი
@@ -106,77 +127,54 @@ export default function ReservationsPage() {
 
       {/* Detail modal */}
       {modal && (
-        <div onClick={() => setModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--panel)", borderRadius: 16, padding: 28, width: 420, boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--txt)" }}>ჯავშანი {modal.id}</div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: STATUS_MAP[modal.status].color, background: STATUS_MAP[modal.status].bg, padding: "2px 8px", borderRadius: 999, marginTop: 4, display: "inline-block" }}>{STATUS_MAP[modal.status].label}</span>
+        <Modal onClose={() => setModal(null)}>
+          <ModalHeader
+            title={`ჯავშანი ${modal.id}`}
+            sub={
+              <span style={{ fontSize: 11, fontWeight: 600, color: STATUS_MAP[modal.status].color, background: STATUS_MAP[modal.status].bg, padding: "2px 8px", borderRadius: 999, display: "inline-block" }}>
+                {STATUS_MAP[modal.status].label}
+              </span>
+            }
+            onClose={() => setModal(null)}
+          />
+          <div style={{ background: "var(--bg)", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+            {[
+              { Icon: Users, label: "სტუმარი", value: modal.guest },
+              { Icon: Door, label: "ოთახი", value: `${modal.room} · ${modal.type}` },
+              { Icon: CalendarBlank, label: "Check-in", value: modal.checkin },
+              { Icon: CalendarBlank, label: "Check-out", value: modal.checkout },
+              { Icon: CreditCard, label: "ფასი", value: modal.price },
+            ].map(({ Icon, label, value }) => (
+              <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Icon size={14} color="var(--txt3)" />
+                <span style={{ fontSize: 12, color: "var(--txt3)", width: 70 }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--txt)" }}>{value}</span>
               </div>
-              <button onClick={() => setModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--txt3)" }}><X size={18} /></button>
-            </div>
-            <div style={{ background: "var(--bg)", borderRadius: 10, padding: 16, marginBottom: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-              {[
-                [Users,        "სტუმარი",  modal.guest],
-                [Door,         "ოთახი",    `${modal.room} · ${modal.type}`],
-                [CalendarBlank,"Check-in",  modal.checkin],
-                [CalendarBlank,"Check-out", modal.checkout],
-                [CreditCard,   "ფასი",     modal.price],
-              ].map(([Icon, lbl, val]) => (
-                <div key={String(lbl)} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Icon size={14} color="var(--txt3)" />
-                  <span style={{ fontSize: 12, color: "var(--txt3)", width: 70 }}>{String(lbl)}</span>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--txt)" }}>{String(val)}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <button onClick={() => setModal(null)} style={{ padding: "10px 0", borderRadius: 8, border: "1px solid var(--bdr)", background: "none", fontSize: 13, color: "var(--txt2)", cursor: "pointer" }}>დახურვა</button>
-              {modal.status === "ok" && <button style={{ padding: "10px 0", borderRadius: 8, border: "none", background: "var(--acc)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Check size={13} weight="bold" />Check-in</button>}
-              {modal.status === "in" && <button style={{ padding: "10px 0", borderRadius: 8, border: "none", background: "#EF4444", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Check-out</button>}
-            </div>
+            ))}
           </div>
-        </div>
+          <ModalActions>
+            <GhostButton onClick={() => setModal(null)}>დახურვა</GhostButton>
+            {modal.status === "ok" && (
+              <PrimaryButton onClick={() => setStatus(modal.id, "in")}>
+                <Check size={13} weight="bold" />Check-in
+              </PrimaryButton>
+            )}
+            {modal.status === "in" && (
+              <PrimaryButton color="#EF4444" onClick={() => setStatus(modal.id, "done")}>Check-out</PrimaryButton>
+            )}
+            {modal.status === "done" && (
+              <PrimaryButton color="var(--bdr)" onClick={() => setModal(null)}>დასრულებული</PrimaryButton>
+            )}
+            {modal.status === "cancel" && (
+              <PrimaryButton onClick={() => setStatus(modal.id, "ok")}>აღდგენა</PrimaryButton>
+            )}
+          </ModalActions>
+        </Modal>
       )}
 
       {/* New reservation modal */}
       {newModal && (
-        <div onClick={() => setNewModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--panel)", borderRadius: 16, padding: 28, width: 440, boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--txt)" }}>ახალი ჯავშანი</h3>
-              <button onClick={() => setNewModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--txt3)" }}><X size={18} /></button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {[
-                { label: "სტუმრის სახელი", key: "guest", placeholder: "გ. მამულაშვილი" },
-                { label: "ოთახის ნომერი", key: "room", placeholder: "204" },
-                { label: "Check-in", key: "checkin", placeholder: "2026-06-28" },
-                { label: "Check-out", key: "checkout", placeholder: "2026-06-30" },
-              ].map(({ label, key, placeholder }) => (
-                <div key={key}>
-                  <label style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", display: "block", marginBottom: 5 }}>{label}</label>
-                  <input
-                    value={form[key as keyof typeof form]}
-                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                    placeholder={placeholder}
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--bdr)", fontSize: 13, color: "var(--txt)", outline: "none", background: "var(--bg)" }}
-                  />
-                </div>
-              ))}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", display: "block", marginBottom: 5 }}>ოთახის ტიპი</label>
-                <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--bdr)", fontSize: 13, color: "var(--txt)", outline: "none", background: "var(--bg)" }}>
-                  {["სტანდარტი", "დელუქსი", "სუიტი", "პენტჰაუსი"].map((t) => <option key={t}>{t}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 20 }}>
-              <button onClick={() => setNewModal(false)} style={{ padding: "10px 0", borderRadius: 8, border: "1px solid var(--bdr)", background: "none", fontSize: 13, color: "var(--txt2)", cursor: "pointer" }}>გაუქმება</button>
-              <button onClick={() => setNewModal(false)} style={{ padding: "10px 0", borderRadius: 8, border: "none", background: "var(--acc)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>შენახვა</button>
-            </div>
-          </div>
-        </div>
+        <NewReservationModal onClose={() => setNewModal(false)} onSave={addReservation} />
       )}
     </div>
   );

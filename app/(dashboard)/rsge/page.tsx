@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowsClockwise, CheckCircle, Warning, Clock, FileText } from "@phosphor-icons/react";
 
 const SYNC_LOG = [
@@ -14,7 +14,7 @@ const SYNC_LOG = [
   { time: "15 ივნ 08:00", action: "RS.ge API კალიბრაცია", status: "ok" },
 ];
 
-const PENDING = [
+const INITIAL_PENDING = [
   { id: "JV-1039", guest: "ნინო კვარაცხელია", amount: "₾220", date: "29 ივნ" },
   { id: "JV-1038", guest: "მარიამ გელაშვილი", amount: "₾410", date: "30 ივნ" },
   { id: "JV-1037", guest: "David Johnson",      amount: "₾560", date: "01 ივლ" },
@@ -23,11 +23,33 @@ const PENDING = [
 export default function RsgePage() {
   const [syncing, setSyncing] = useState(false);
   const [done, setDone] = useState(false);
+  const [pending, setPending] = useState(INITIAL_PENDING);
+  const [log, setLog] = useState(SYNC_LOG);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear a pending sync if the page unmounts mid-run.
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   function handleSync() {
     setSyncing(true);
     setDone(false);
-    setTimeout(() => { setSyncing(false); setDone(true); }, 2200);
+    timer.current = setTimeout(() => {
+      setSyncing(false);
+      setDone(true);
+      if (pending.length) {
+        setLog((l) => [
+          { time: "ახლა", action: `ავტომატური სინქ — ${pending.length} ფაქტური`, status: "ok" },
+          ...l,
+        ]);
+        setPending([]);
+      }
+    }, 2200);
+  }
+
+  /** Send one invoice to RS.ge: drop it from the queue and record it in the log. */
+  function sendInvoice(id: string) {
+    setPending((p) => p.filter((x) => x.id !== id));
+    setLog((l) => [{ time: "ახლა", action: `ფაქტური ${id} გაგზავნილი RS.ge-ზე`, status: "ok" }, ...l]);
   }
 
   return (
@@ -54,8 +76,8 @@ export default function RsgePage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
         {[
-          { icon: CheckCircle, label: "გაგზავნილი ფაქტ.", value: "47",  color: "#065F46", bg: "rgba(16,185,129,.1)" },
-          { icon: Clock,       label: "გაგზავნა გვიანდება", value: "3",  color: "#92400E", bg: "rgba(245,158,11,.1)" },
+          { icon: CheckCircle, label: "გაგზავნილი ფაქტ.", value: String(47 + (INITIAL_PENDING.length - pending.length)), color: "#065F46", bg: "rgba(16,185,129,.1)" },
+          { icon: Clock,       label: "გაგზავნა გვიანდება", value: String(pending.length),  color: "#92400E", bg: "rgba(245,158,11,.1)" },
           { icon: Warning,     label: "შეცდომები",          value: "1",  color: "#991B1B", bg: "rgba(239,68,68,.1)" },
         ].map((c) => (
           <div key={c.label} style={{ background: "var(--panel)", border: "1px solid var(--bdr)", borderRadius: 12, padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 }}>
@@ -77,8 +99,8 @@ export default function RsgePage() {
             <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)" }}>სინქ. ლოგი</h2>
           </div>
           <div style={{ padding: 0 }}>
-            {SYNC_LOG.map((l, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 20px", borderBottom: i < SYNC_LOG.length - 1 ? "1px solid var(--bdr)" : "none" }}>
+            {log.map((l, i) => (
+              <div key={`${l.time}-${l.action}`} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 20px", borderBottom: i < log.length - 1 ? "1px solid var(--bdr)" : "none" }}>
                 <div style={{ marginTop: 1, flexShrink: 0 }}>
                   {l.status === "ok"
                     ? <CheckCircle size={14} color="#10B981" weight="fill" />
@@ -100,7 +122,12 @@ export default function RsgePage() {
             <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)" }}>გასაგზავნი ფაქტ.</h2>
           </div>
           <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-            {PENDING.map((p) => (
+            {pending.length === 0 && (
+              <div style={{ padding: "20px 4px", textAlign: "center", fontSize: 12, color: "var(--txt3)" }}>
+                ყველა ფაქტური გაგზავნილია ✓
+              </div>
+            )}
+            {pending.map((p) => (
               <div key={p.id} style={{ background: "var(--bg)", borderRadius: 10, padding: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                   <span style={{ fontSize: 12, fontFamily: "monospace", color: "var(--txt3)" }}>{p.id}</span>
@@ -109,7 +136,7 @@ export default function RsgePage() {
                 <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 8 }}>{p.guest}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 11, color: "var(--txt3)" }}>{p.date}</span>
-                  <button style={{ fontSize: 11, color: "var(--acc)", background: "var(--acc-s)", border: "none", borderRadius: 5, padding: "3px 9px", cursor: "pointer", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                  <button onClick={() => sendInvoice(p.id)} style={{ fontSize: 11, color: "var(--acc)", background: "var(--acc-s)", border: "none", borderRadius: 5, padding: "3px 9px", cursor: "pointer", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                     <FileText size={11} />გაგზავნა
                   </button>
                 </div>

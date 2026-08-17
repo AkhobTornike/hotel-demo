@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, Phone, EnvelopeSimple, MapPin, MagnifyingGlass, Star } from "@phosphor-icons/react";
+import { Plus, Phone, EnvelopeSimple, MapPin, MagnifyingGlass, Star, Check } from "@phosphor-icons/react";
+import Modal, { ModalHeader, ModalActions, GhostButton, PrimaryButton, Field } from "@/components/Modal";
+import NewReservationModal from "@/components/NewReservationModal";
 
-const GUESTS = [
+const INITIAL_GUESTS = [
   { id: "G-001", name: "გიორგი მამულაშვილი", phone: "+995 555 123 456", email: "g.mamulashvili@gmail.com", country: "საქართველო", visits: 4, spent: "₾1,240", vip: true, status: "active" },
   { id: "G-002", name: "Иван Петров", phone: "+7 916 234 5678", email: "ivan.petrov@mail.ru", country: "რუსეთი", visits: 2, spent: "₾680", vip: false, status: "active" },
   { id: "G-003", name: "Ana Müller", phone: "+49 171 345 6789", email: "ana.mueller@gmail.com", country: "გერმანია", visits: 1, spent: "₾165", vip: false, status: "active" },
@@ -20,11 +22,30 @@ const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> =
   past:     { label: "დასრულებული", color: "#6B7280", bg: "#F3F4F6" },
 };
 
-export default function GuestsPage() {
-  const [search, setSearch] = useState("");
-  const [modal, setModal] = useState<typeof GUESTS[0] | null>(null);
+type Guest = (typeof INITIAL_GUESTS)[0];
 
-  const filtered = GUESTS.filter((g) =>
+const EMPTY_GUEST = { name: "", phone: "", email: "", country: "" };
+
+export default function GuestsPage() {
+  const [guests, setGuests] = useState<Guest[]>(INITIAL_GUESTS);
+  const [search, setSearch] = useState("");
+  const [modal, setModal] = useState<Guest | null>(null);
+  const [addModal, setAddModal] = useState(false);
+  const [form, setForm] = useState(EMPTY_GUEST);
+  const [bookingFor, setBookingFor] = useState<string | null>(null);
+
+  function addGuest() {
+    if (!form.name.trim()) return;
+    const id = `G-${String(guests.length + 1).padStart(3, "0")}`;
+    setGuests((p) => [
+      { id, name: form.name, phone: form.phone || "—", email: form.email || "—", country: form.country || "—", visits: 0, spent: "₾0", vip: false, status: "upcoming" },
+      ...p,
+    ]);
+    setForm(EMPTY_GUEST);
+    setAddModal(false);
+  }
+
+  const filtered = guests.filter((g) =>
     g.name.toLowerCase().includes(search.toLowerCase()) ||
     g.email.toLowerCase().includes(search.toLowerCase()) ||
     g.country.includes(search)
@@ -35,9 +56,9 @@ export default function GuestsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--txt)" }}>სტუმრები</h1>
-          <p style={{ fontSize: 13, color: "var(--txt3)", marginTop: 2 }}>{GUESTS.length} სტუმარი სულ &middot; {GUESTS.filter(g => g.vip).length} VIP</p>
+          <p style={{ fontSize: 13, color: "var(--txt3)", marginTop: 2 }}>{guests.length} სტუმარი სულ &middot; {guests.filter(g => g.vip).length} VIP</p>
         </div>
-        <button style={{ background: "var(--acc)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+        <button onClick={() => setAddModal(true)} style={{ background: "var(--acc)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
           <Plus size={14} weight="bold" /> სტუმრის დამატება
         </button>
       </div>
@@ -101,55 +122,78 @@ export default function GuestsPage() {
 
       {/* Guest profile modal */}
       {modal && (
-        <div onClick={() => setModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--panel)", borderRadius: 16, padding: 28, width: 420, boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--acc-s)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "var(--acc)" }}>
-                  {modal.name.charAt(0)}
-                </div>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--txt)", display: "flex", alignItems: "center", gap: 6 }}>
-                    {modal.name}
-                    {modal.vip && <Star size={14} weight="fill" color="#F59E0B" />}
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--txt3)" }}>{modal.id} &middot; {modal.country}</div>
-                </div>
+        <Modal onClose={() => setModal(null)}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--acc-s)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "var(--acc)" }}>
+                {modal.name.charAt(0)}
               </div>
-              <button onClick={() => setModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--txt3)" }}><X size={18} /></button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-              {[
-                [Phone, modal.phone],
-                [EnvelopeSimple, modal.email],
-                [MapPin, modal.country],
-              ].map(([Icon, val]) => (
-                <div key={String(val)} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--txt2)" }}>
-                  <Icon size={14} color="var(--txt3)" />
-                  {String(val)}
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--txt)", display: "flex", alignItems: "center", gap: 6 }}>
+                  {modal.name}
+                  {modal.vip && <Star size={14} weight="fill" color="#F59E0B" />}
                 </div>
-              ))}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, background: "var(--bg)", borderRadius: 10, padding: 16, marginBottom: 20 }}>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "var(--txt)" }}>{modal.visits}</div>
-                <div style={{ fontSize: 11, color: "var(--txt3)" }}>ვიზიტი</div>
+                <div style={{ fontSize: 12, color: "var(--txt3)" }}>{modal.id} &middot; {modal.country}</div>
               </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "var(--txt)" }}>{modal.spent}</div>
-                <div style={{ fontSize: 11, color: "var(--txt3)" }}>სულ დახარჯა</div>
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <button onClick={() => setModal(null)} style={{ padding: "10px 0", borderRadius: 8, border: "1px solid var(--bdr)", background: "none", fontSize: 13, color: "var(--txt2)", cursor: "pointer" }}>
-                დახურვა
-              </button>
-              <button style={{ padding: "10px 0", borderRadius: 8, border: "none", background: "var(--acc)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                ახალი ჯავშანი
-              </button>
             </div>
           </div>
-        </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+            {[
+              { Icon: Phone, value: modal.phone },
+              { Icon: EnvelopeSimple, value: modal.email },
+              { Icon: MapPin, value: modal.country },
+            ].map(({ Icon, value }) => (
+              <div key={value} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--txt2)" }}>
+                <Icon size={14} color="var(--txt3)" />
+                {value}
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, background: "var(--bg)", borderRadius: 10, padding: 16 }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "var(--txt)" }}>{modal.visits}</div>
+              <div style={{ fontSize: 11, color: "var(--txt3)" }}>ვიზიტი</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "var(--txt)" }}>{modal.spent}</div>
+              <div style={{ fontSize: 11, color: "var(--txt3)" }}>სულ დახარჯა</div>
+            </div>
+          </div>
+          <ModalActions>
+            <GhostButton onClick={() => setModal(null)}>დახურვა</GhostButton>
+            <PrimaryButton onClick={() => { setBookingFor(modal.name); setModal(null); }}>
+              ახალი ჯავშანი
+            </PrimaryButton>
+          </ModalActions>
+        </Modal>
+      )}
+
+      {/* Add guest modal */}
+      {addModal && (
+        <Modal onClose={() => setAddModal(false)}>
+          <ModalHeader title="სტუმრის დამატება" onClose={() => setAddModal(false)} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Field label="სახელი და გვარი" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="გ. მამულაშვილი" />
+            <Field label="ტელეფონი" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+995 555 123 456" />
+            <Field label="Email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="guest@example.com" />
+            <Field label="ქვეყანა" value={form.country} onChange={(v) => setForm({ ...form, country: v })} placeholder="საქართველო" />
+          </div>
+          <ModalActions>
+            <GhostButton onClick={() => setAddModal(false)}>გაუქმება</GhostButton>
+            <PrimaryButton onClick={addGuest}>
+              <Check size={14} weight="bold" />შენახვა
+            </PrimaryButton>
+          </ModalActions>
+        </Modal>
+      )}
+
+      {/* New booking for a guest */}
+      {bookingFor && (
+        <NewReservationModal
+          initialGuest={bookingFor}
+          onClose={() => setBookingFor(null)}
+          onSave={() => setBookingFor(null)}
+        />
       )}
     </div>
   );

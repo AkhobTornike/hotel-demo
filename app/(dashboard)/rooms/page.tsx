@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, Check, MagnifyingGlass } from "@phosphor-icons/react";
+import { Plus, Check, MagnifyingGlass } from "@phosphor-icons/react";
+import Modal, { ModalHeader, ModalActions, GhostButton, PrimaryButton, Field } from "@/components/Modal";
+import { ROOM_TYPES } from "@/components/NewReservationModal";
 
-const ROOMS = [
+const INITIAL_ROOMS = [
   { id: "101", type: "სტანდარტი", floor: 1, capacity: 2, price: 90, status: "free", guest: "" },
   { id: "102", type: "სტანდარტი", floor: 1, capacity: 2, price: 90, status: "occupied", guest: "ნინო ბერიძე" },
   { id: "103", type: "სტანდარტი", floor: 1, capacity: 2, price: 90, status: "cleaning", guest: "" },
@@ -27,26 +29,55 @@ const STATUS: Record<string, { label: string; color: string; bg: string; dot: st
   maint:    { label: "სარემონტო",   color: "#6B7280", bg: "#F3F4F6",             dot: "#9CA3AF" },
 };
 
-export default function RoomsPage() {
-  const [filter, setFilter] = useState("all");
-  const [modal, setModal] = useState<typeof ROOMS[0] | null>(null);
-  const [search, setSearch] = useState("");
+type Room = (typeof INITIAL_ROOMS)[0];
 
-  const filtered = ROOMS.filter((r) => {
+const EMPTY_ROOM = { id: "", type: ROOM_TYPES[0], floor: "", capacity: "", price: "" };
+
+export default function RoomsPage() {
+  const [rooms, setRooms] = useState<Room[]>(INITIAL_ROOMS);
+  const [filter, setFilter] = useState("all");
+  const [modal, setModal] = useState<Room | null>(null);
+  const [search, setSearch] = useState("");
+  const [addModal, setAddModal] = useState(false);
+  const [form, setForm] = useState(EMPTY_ROOM);
+
+  /** Move a room to a new status; clears the guest when the room empties. */
+  function setRoomStatus(id: string, status: string) {
+    setRooms((p) => p.map((r) => (r.id === id ? { ...r, status, guest: status === "occupied" ? r.guest : "" } : r)));
+    setModal(null);
+  }
+
+  function addRoom() {
+    if (!form.id.trim()) return;
+    setRooms((p) => [
+      ...p,
+      {
+        id: form.id, type: form.type,
+        floor: Number(form.floor) || 1,
+        capacity: Number(form.capacity) || 2,
+        price: Number(form.price) || 0,
+        status: "free", guest: "",
+      },
+    ]);
+    setForm(EMPTY_ROOM);
+    setAddModal(false);
+  }
+
+  const filtered = rooms.filter((r) => {
     const matchF = filter === "all" || r.status === filter;
     const matchS = r.id.includes(search) || r.type.includes(search) || r.guest.toLowerCase().includes(search.toLowerCase());
     return matchF && matchS;
   });
 
   const counts = {
-    free:     ROOMS.filter((r) => r.status === "free").length,
-    occupied: ROOMS.filter((r) => r.status === "occupied").length,
-    cleaning: ROOMS.filter((r) => r.status === "cleaning").length,
-    maint:    ROOMS.filter((r) => r.status === "maint").length,
+    free:     rooms.filter((r) => r.status === "free").length,
+    occupied: rooms.filter((r) => r.status === "occupied").length,
+    cleaning: rooms.filter((r) => r.status === "cleaning").length,
+    maint:    rooms.filter((r) => r.status === "maint").length,
   };
 
   const FILTERS = [
-    { key: "all",      label: `ყველა (${ROOMS.length})` },
+    { key: "all",      label: `ყველა (${rooms.length})` },
     { key: "free",     label: `თავისუფალი (${counts.free})` },
     { key: "occupied", label: `დაკავებული (${counts.occupied})` },
     { key: "cleaning", label: `დასუფთავება (${counts.cleaning})` },
@@ -60,10 +91,10 @@ export default function RoomsPage() {
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--txt)" }}>ოთახები</h1>
           <p style={{ fontSize: 13, color: "var(--txt3)", marginTop: 2 }}>
-            {counts.occupied}/{ROOMS.length} დაკავებული &middot; {counts.free} თავისუფალი
+            {counts.occupied}/{rooms.length} დაკავებული &middot; {counts.free} თავისუფალი
           </p>
         </div>
-        <button style={{ background: "var(--acc)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+        <button onClick={() => setAddModal(true)} style={{ background: "var(--acc)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
           <Plus size={14} weight="bold" /> ოთახის დამატება
         </button>
       </div>
@@ -108,51 +139,73 @@ export default function RoomsPage() {
 
       {/* Room detail modal */}
       {modal && (
-        <div onClick={() => setModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--panel)", borderRadius: 16, padding: 28, width: 400, boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: "var(--txt)", fontFamily: "monospace" }}>ოთახი {modal.id}</div>
-                <div style={{ fontSize: 13, color: "var(--txt3)" }}>{modal.type} &middot; {modal.floor} სართული</div>
+        <Modal onClose={() => setModal(null)} width={400}>
+          <ModalHeader
+            title={<span style={{ fontSize: 24, fontWeight: 800, fontFamily: "monospace" }}>ოთახი {modal.id}</span>}
+            sub={`${modal.type} · ${modal.floor} სართული`}
+            onClose={() => setModal(null)}
+          />
+          <div style={{ background: "var(--bg)", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+            {([
+              ["ტიპი", modal.type],
+              ["სტუმართა რ.", `${modal.capacity} სტუმარი`],
+              ["ფასი", `₾${modal.price} / ღამე`],
+              ["სტატუსი", STATUS[modal.status].label],
+              ...(modal.guest ? [["სტუმარი", modal.guest]] : []),
+            ] as [string, string][]).map(([k, v]) => (
+              <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ color: "var(--txt3)" }}>{k}</span>
+                <span style={{ fontWeight: 500, color: "var(--txt)" }}>{v}</span>
               </div>
-              <button onClick={() => setModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--txt3)" }}><X size={18} /></button>
-            </div>
-            <div style={{ background: "var(--bg)", borderRadius: 10, padding: 16, marginBottom: 20, display: "flex", flexDirection: "column", gap: 8 }}>
-              {([
-                ["ტიპი", modal.type],
-                ["სტუმართა რ.", `${modal.capacity} სტუმარი`],
-                ["ფასი", `₾${modal.price} / ღამე`],
-                ["სტატუსი", STATUS[modal.status].label],
-                ...(modal.guest ? [["სტუმარი", modal.guest]] : []),
-              ] as [string, string][]).map(([k, v]) => (
-                <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                  <span style={{ color: "var(--txt3)" }}>{k}</span>
-                  <span style={{ fontWeight: 500, color: "var(--txt)" }}>{v}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <button onClick={() => setModal(null)} style={{ padding: "10px 0", borderRadius: 8, border: "1px solid var(--bdr)", background: "none", fontSize: 13, color: "var(--txt2)", cursor: "pointer" }}>
-                დახურვა
-              </button>
-              {modal.status === "free" && (
-                <button style={{ padding: "10px 0", borderRadius: 8, border: "none", background: "var(--acc)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                  ჯავშნის გახსნა
-                </button>
-              )}
-              {modal.status === "occupied" && (
-                <button style={{ padding: "10px 0", borderRadius: 8, border: "none", background: "#EF4444", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                  Check-out
-                </button>
-              )}
-              {modal.status === "cleaning" && (
-                <button style={{ padding: "10px 0", borderRadius: 8, border: "none", background: "#F59E0B", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                  <Check size={13} />დასუფთავდა
-                </button>
-              )}
-            </div>
+            ))}
           </div>
-        </div>
+          <ModalActions>
+            <GhostButton onClick={() => setModal(null)}>დახურვა</GhostButton>
+            {modal.status === "free" && (
+              <PrimaryButton onClick={() => setRoomStatus(modal.id, "occupied")}>ჯავშნის გახსნა</PrimaryButton>
+            )}
+            {modal.status === "occupied" && (
+              <PrimaryButton color="#EF4444" onClick={() => setRoomStatus(modal.id, "cleaning")}>Check-out</PrimaryButton>
+            )}
+            {modal.status === "cleaning" && (
+              <PrimaryButton color="#F59E0B" onClick={() => setRoomStatus(modal.id, "free")}>
+                <Check size={13} />დასუფთავდა
+              </PrimaryButton>
+            )}
+            {modal.status === "maint" && (
+              <PrimaryButton onClick={() => setRoomStatus(modal.id, "free")}>რემონტი დასრულდა</PrimaryButton>
+            )}
+          </ModalActions>
+        </Modal>
+      )}
+
+      {/* Add room modal */}
+      {addModal && (
+        <Modal onClose={() => setAddModal(false)}>
+          <ModalHeader title="ოთახის დამატება" onClose={() => setAddModal(false)} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Field label="ოთახის ნომერი" value={form.id} onChange={(v) => setForm({ ...form, id: v })} placeholder="405" />
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", display: "block", marginBottom: 5 }}>ტიპი</label>
+              <select
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value })}
+                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--bdr)", fontSize: 13, color: "var(--txt)", outline: "none", background: "var(--bg)" }}
+              >
+                {ROOM_TYPES.map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <Field label="სართული" value={form.floor} onChange={(v) => setForm({ ...form, floor: v })} placeholder="4" />
+            <Field label="ტევადობა" value={form.capacity} onChange={(v) => setForm({ ...form, capacity: v })} placeholder="2" />
+            <Field label="ფასი / ღამე (₾)" value={form.price} onChange={(v) => setForm({ ...form, price: v })} placeholder="120" />
+          </div>
+          <ModalActions>
+            <GhostButton onClick={() => setAddModal(false)}>გაუქმება</GhostButton>
+            <PrimaryButton onClick={addRoom}>
+              <Check size={14} weight="bold" />შენახვა
+            </PrimaryButton>
+          </ModalActions>
+        </Modal>
       )}
     </div>
   );

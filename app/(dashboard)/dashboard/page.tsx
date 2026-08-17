@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import {
-  Users, Door, CreditCard, TrendUp, X, Check,
+  Users, Door, CreditCard, TrendUp, Check,
   CalendarBlank, Clock,
 } from "@phosphor-icons/react";
+import Modal, { ModalHeader, ModalActions, GhostButton, PrimaryButton } from "@/components/Modal";
+import NewReservationModal from "@/components/NewReservationModal";
 
 const STATS = [
   { label: "დღევანდელი სტუმრები", value: "24", sub: "+3 check-in დღეს", icon: Users, color: "var(--acc)", bg: "var(--acc-s)" },
@@ -13,7 +15,7 @@ const STATS = [
   { label: "მოლოდინში გადახდები", value: "5", sub: "₾820 სულ", icon: CreditCard, color: "var(--rose)", bg: "var(--rose-s)" },
 ];
 
-const RESERVATIONS = [
+const INITIAL_RESERVATIONS = [
   { id: "JV-1042", guest: "გიორგი მამულაშვილი", room: "204", type: "სტანდარტი", checkin: "28 ივნ", checkout: "30 ივნ", status: "in", price: "₾180" },
   { id: "JV-1041", guest: "Иван Петров", room: "312", type: "სუიტი", checkin: "27 ივნ", checkout: "29 ივნ", status: "ok", price: "₾340" },
   { id: "JV-1040", guest: "Ana Müller", room: "108", type: "სტანდარტი", checkin: "28 ივნ", checkout: "01 ივლ", status: "ok", price: "₾165" },
@@ -27,13 +29,26 @@ const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }>
   pending: { label: "მოლოდინში", color: "var(--amb-txt)", bg: "var(--amb-s)" },
 };
 
+type Reservation = (typeof INITIAL_RESERVATIONS)[0];
+
 export default function DashboardPage() {
-  const [modal, setModal] = useState<(typeof RESERVATIONS)[0] | null>(null);
+  const [reservations, setReservations] = useState<Reservation[]>(INITIAL_RESERVATIONS);
+  const [modal, setModal] = useState<Reservation | null>(null);
+  const [newModal, setNewModal] = useState(false);
   const [checkedIn, setCheckedIn] = useState<string[]>([]);
 
   function doCheckin(id: string) {
     setCheckedIn((p) => [...p, id]);
     setModal(null);
+  }
+
+  function addReservation(r: { guest: string; room: string; checkin: string; checkout: string; type: string }) {
+    const id = `JV-${1043 + reservations.length - INITIAL_RESERVATIONS.length}`;
+    setReservations((p) => [
+      { id, guest: r.guest, room: r.room || "—", type: r.type, checkin: r.checkin || "—", checkout: r.checkout || "—", status: "pending", price: "—" },
+      ...p,
+    ]);
+    setNewModal(false);
   }
 
   return (
@@ -45,6 +60,7 @@ export default function DashboardPage() {
           <p style={{ fontSize: 13, color: "var(--txt3)", marginTop: 2 }}>28 ივნისი, 2026 — კვირა</p>
         </div>
         <button
+          onClick={() => setNewModal(true)}
           style={{
             background: "var(--acc)", color: "#fff", border: "none", borderRadius: 8,
             padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
@@ -76,7 +92,7 @@ export default function DashboardPage() {
       <div style={{ background: "var(--panel)", border: "1px solid var(--bdr)", borderRadius: 12, overflow: "hidden" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--bdr)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)" }}>დღევანდელი ჯავშნები</h2>
-          <span style={{ fontSize: 12, color: "var(--txt3)" }}>5 ჩანაწერი</span>
+          <span style={{ fontSize: 12, color: "var(--txt3)" }}>{reservations.length} ჩანაწერი</span>
         </div>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
@@ -87,7 +103,7 @@ export default function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            {RESERVATIONS.map((r) => {
+            {reservations.map((r) => {
               const st = STATUS_LABEL[checkedIn.includes(r.id) ? "in" : r.status];
               return (
                 <tr key={r.id} style={{ borderBottom: "1px solid var(--bdr)" }}>
@@ -121,60 +137,36 @@ export default function DashboardPage() {
 
       {/* Check-in Modal */}
       {modal && (
-        <div
-          onClick={() => setModal(null)}
-          style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", display: "flex",
-            alignItems: "center", justifyContent: "center", zIndex: 50,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "var(--panel)", borderRadius: 16, padding: 28, width: 440,
-              boxShadow: "0 20px 60px rgba(0,0,0,.2)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--txt)" }}>Check-in დადასტურება</h3>
-              <button onClick={() => setModal(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--txt3)" }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ background: "var(--bg)", borderRadius: 10, padding: 16, marginBottom: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-              {[
-                [Users, "სტუმარი", modal.guest],
-                [Door, "ოთახი", `${modal.room} · ${modal.type}`],
-                [CalendarBlank, "Check-in", modal.checkin],
-                [Clock, "Check-out", modal.checkout],
-                [CreditCard, "ჯამი", modal.price],
-              ].map(([Icon, lbl, val]) => (
-                <div key={String(lbl)} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ color: "var(--txt3)" }}><Icon size={14} /></span>
-                  <span style={{ fontSize: 12, color: "var(--txt3)", width: 80 }}>{String(lbl)}</span>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "var(--txt)" }}>{String(val)}</span>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <button
-                onClick={() => setModal(null)}
-                style={{ padding: "10px 0", borderRadius: 8, border: "1px solid var(--bdr)", background: "none", fontSize: 13, color: "var(--txt2)", cursor: "pointer" }}
-              >
-                გაუქმება
-              </button>
-              <button
-                onClick={() => doCheckin(modal.id)}
-                style={{ padding: "10px 0", borderRadius: 8, border: "none", background: "var(--acc)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-              >
-                <Check size={14} weight="bold" />
-                Check-in დადასტურება
-              </button>
-            </div>
+        <Modal onClose={() => setModal(null)} width={440}>
+          <ModalHeader title="Check-in დადასტურება" onClose={() => setModal(null)} />
+          <div style={{ background: "var(--bg)", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+            {[
+              { Icon: Users, label: "სტუმარი", value: modal.guest },
+              { Icon: Door, label: "ოთახი", value: `${modal.room} · ${modal.type}` },
+              { Icon: CalendarBlank, label: "Check-in", value: modal.checkin },
+              { Icon: Clock, label: "Check-out", value: modal.checkout },
+              { Icon: CreditCard, label: "ჯამი", value: modal.price },
+            ].map(({ Icon, label, value }) => (
+              <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ color: "var(--txt3)" }}><Icon size={14} /></span>
+                <span style={{ fontSize: 12, color: "var(--txt3)", width: 80 }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--txt)" }}>{value}</span>
+              </div>
+            ))}
           </div>
-        </div>
+          <ModalActions>
+            <GhostButton onClick={() => setModal(null)}>გაუქმება</GhostButton>
+            <PrimaryButton onClick={() => doCheckin(modal.id)}>
+              <Check size={14} weight="bold" />
+              დადასტურება
+            </PrimaryButton>
+          </ModalActions>
+        </Modal>
+      )}
+
+      {/* New reservation */}
+      {newModal && (
+        <NewReservationModal onClose={() => setNewModal(false)} onSave={addReservation} />
       )}
     </div>
   );

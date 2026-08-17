@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -42,8 +43,12 @@ const NAV_SECTIONS = [
   },
 ];
 
+const HOTELS = ["Tbilisi Grand Hotel", "Batumi Seaside Resort"];
+
 export default function Sidebar() {
   const pathname = usePathname();
+  const [hotel, setHotel] = useState(HOTELS[0]);
+  const [open, setOpen] = useState(false);
 
   return (
     <aside
@@ -95,34 +100,62 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Hotel pill */}
-      <div
-        style={{
-          margin: "10px 10px 4px",
-          padding: "9px 12px",
-          background: "var(--sb-hov)",
-          border: "1px solid var(--sb-bdr)",
-          borderRadius: 8,
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          cursor: "pointer",
-        }}
-      >
-        <span
+      {/* Hotel switcher */}
+      <div style={{ margin: "10px 10px 4px", position: "relative" }}>
+        <button
+          onClick={() => setOpen((o) => !o)}
           style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: "var(--acc)",
-            boxShadow: "0 0 0 3px rgba(16,185,129,.2)",
-            flexShrink: 0,
+            width: "100%",
+            padding: "9px 12px",
+            background: "var(--sb-hov)",
+            border: "1px solid var(--sb-bdr)",
+            borderRadius: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            cursor: "pointer",
+            textAlign: "left",
           }}
-        />
-        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--sb-txt)", flex: 1 }}>
-          Tbilisi Grand Hotel
-        </span>
-        <CaretUpDown size={12} color="var(--sb-txt3)" />
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: "var(--acc)",
+              boxShadow: "0 0 0 3px rgba(16,185,129,.2)",
+              flexShrink: 0,
+            }}
+          />
+          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--sb-txt)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {hotel}
+          </span>
+          <CaretUpDown size={12} color="var(--sb-txt3)" />
+        </button>
+        {open && (
+          <div
+            style={{
+              position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 20,
+              background: "var(--sb-el)", border: "1px solid var(--sb-bdr)", borderRadius: 8,
+              padding: 4, boxShadow: "0 10px 30px rgba(0,0,0,.4)",
+            }}
+          >
+            {HOTELS.map((h) => (
+              <button
+                key={h}
+                onClick={() => { setHotel(h); setOpen(false); }}
+                style={{
+                  width: "100%", textAlign: "left", padding: "7px 9px", borderRadius: 6,
+                  border: "none", cursor: "pointer", fontSize: 12,
+                  background: h === hotel ? "var(--sb-hov)" : "transparent",
+                  color: h === hotel ? "var(--sb-txt)" : "var(--sb-txt2)",
+                }}
+              >
+                {h}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Nav */}
