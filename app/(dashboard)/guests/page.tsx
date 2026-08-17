@@ -1,174 +1,218 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Phone, EnvelopeSimple, MapPin, MagnifyingGlass, Star, Check } from "@phosphor-icons/react";
+import { useMemo, useState } from "react";
+import { Plus, Phone, EnvelopeSimple, MapPin, Star, Check, Calendar, Note } from "@phosphor-icons/react";
 import Modal, { ModalHeader, ModalActions, GhostButton, PrimaryButton, Field } from "@/components/Modal";
 import NewReservationModal from "@/components/NewReservationModal";
+import { Avatar, Badge, Empty, FilterPills, PageHeader, Panel, SearchBox, Td, Th } from "@/components/ui";
+import { useHotel } from "@/contexts/HotelContext";
+import { RESERVATION_STATUS, gel, type Guest } from "@/lib/data";
+import { daysBetween, fmtShort, fmtLong } from "@/lib/dates";
+import { matches } from "@/lib/search";
 
-const INITIAL_GUESTS = [
-  { id: "G-001", name: "გიორგი მამულაშვილი", phone: "+995 555 123 456", email: "g.mamulashvili@gmail.com", country: "საქართველო", visits: 4, spent: "₾1,240", vip: true, status: "active" },
-  { id: "G-002", name: "Иван Петров", phone: "+7 916 234 5678", email: "ivan.petrov@mail.ru", country: "რუსეთი", visits: 2, spent: "₾680", vip: false, status: "active" },
-  { id: "G-003", name: "Ana Müller", phone: "+49 171 345 6789", email: "ana.mueller@gmail.com", country: "გერმანია", visits: 1, spent: "₾165", vip: false, status: "active" },
-  { id: "G-004", name: "ნინო კვარაცხელია", phone: "+995 577 987 654", email: "nino.k@gmail.com", country: "საქართველო", visits: 7, spent: "₾2,890", vip: true, status: "upcoming" },
-  { id: "G-005", name: "მარიამ გელაშვილი", phone: "+995 598 111 222", email: "mariam.g@yahoo.com", country: "საქართველო", visits: 3, spent: "₾940", vip: false, status: "upcoming" },
-  { id: "G-006", name: "David Johnson", phone: "+1 415 555 0100", email: "djohnson@company.com", country: "აშშ", visits: 1, spent: "₾0", vip: false, status: "upcoming" },
-  { id: "G-007", name: "ნინო ბერიძე", phone: "+995 555 444 333", email: "nino.beridze@gmail.com", country: "საქართველო", visits: 2, spent: "₾480", vip: false, status: "active" },
-  { id: "G-008", name: "Yuki Tanaka", phone: "+81 90 1234 5678", email: "y.tanaka@jp.co", country: "იაპონია", visits: 1, spent: "₾0", vip: false, status: "past" },
-];
-
-const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
-  active:   { label: "სასტუმროში",  color: "#065F46", bg: "rgba(16,185,129,.1)" },
-  upcoming: { label: "მოახლოება",   color: "#92400E", bg: "rgba(245,158,11,.1)" },
-  past:     { label: "დასრულებული", color: "#6B7280", bg: "#F3F4F6" },
-};
-
-type Guest = (typeof INITIAL_GUESTS)[0];
-
-const EMPTY_GUEST = { name: "", phone: "", email: "", country: "" };
+const EMPTY = { name: "", phone: "", email: "", country: "", notes: "" };
 
 export default function GuestsPage() {
-  const [guests, setGuests] = useState<Guest[]>(INITIAL_GUESTS);
+  const { hotel, addGuest } = useHotel();
   const [search, setSearch] = useState("");
-  const [modal, setModal] = useState<Guest | null>(null);
+  const [filter, setFilter] = useState("all");
+  const [profile, setProfile] = useState<Guest | null>(null);
   const [addModal, setAddModal] = useState(false);
-  const [form, setForm] = useState(EMPTY_GUEST);
-  const [bookingFor, setBookingFor] = useState<string | null>(null);
+  const [bookingFor, setBookingFor] = useState<Guest | null>(null);
+  const [form, setForm] = useState(EMPTY);
 
-  function addGuest() {
+  /** Derive each guest's stay history from the reservation list. */
+  const enriched = useMemo(
+    () =>
+      hotel.guests.map((g) => {
+        const bookings = hotel.reservations
+          .filter((r) => r.guestId === g.id)
+          .sort((a, b) => b.checkin.localeCompare(a.checkin));
+        const completed = bookings.filter((b) => b.status !== "cancel");
+        const spent = completed.reduce((s, b) => s + b.total, 0);
+        const nights = completed.reduce((s, b) => s + daysBetween(b.checkin, b.checkout), 0);
+        const current = bookings.find((b) => b.status === "in");
+        const upcoming = bookings.find((b) => b.status === "ok");
+        return {
+          guest: g,
+          bookings,
+          visits: completed.length,
+          spent,
+          nights,
+          status: current ? "active" : upcoming ? "upcoming" : "past",
+          current,
+        };
+      }),
+    [hotel.guests, hotel.reservations],
+  );
+
+  const filtered = enriched.filter((e) => {
+    if (filter === "vip" && !e.guest.vip) return false;
+    if (filter !== "all" && filter !== "vip" && e.status !== filter) return false;
+    return matches(search, [e.guest.name, e.guest.email, e.guest.phone, e.guest.country, e.guest.id]);
+  });
+
+  const counts = {
+    active: enriched.filter((e) => e.status === "active").length,
+    upcoming: enriched.filter((e) => e.status === "upcoming").length,
+    vip: enriched.filter((e) => e.guest.vip).length,
+  };
+
+  function submit() {
     if (!form.name.trim()) return;
-    const id = `G-${String(guests.length + 1).padStart(3, "0")}`;
-    setGuests((p) => [
-      { id, name: form.name, phone: form.phone || "—", email: form.email || "—", country: form.country || "—", visits: 0, spent: "₾0", vip: false, status: "upcoming" },
-      ...p,
-    ]);
-    setForm(EMPTY_GUEST);
+    addGuest({
+      id: `${hotel.id === "tbilisi" ? "G" : "B"}-${Date.now().toString().slice(-3)}`,
+      name: form.name,
+      phone: form.phone || "—",
+      email: form.email || "—",
+      country: form.country || "—",
+      vip: false,
+      since: "2026-06-28",
+      notes: form.notes,
+    });
+    setForm(EMPTY);
     setAddModal(false);
   }
 
-  const filtered = guests.filter((g) =>
-    g.name.toLowerCase().includes(search.toLowerCase()) ||
-    g.email.toLowerCase().includes(search.toLowerCase()) ||
-    g.country.includes(search)
-  );
+  const detail = profile ? enriched.find((e) => e.guest.id === profile.id) : null;
 
   return (
     <div style={{ padding: "28px 24px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--txt)" }}>სტუმრები</h1>
-          <p style={{ fontSize: 13, color: "var(--txt3)", marginTop: 2 }}>{guests.length} სტუმარი სულ &middot; {guests.filter(g => g.vip).length} VIP</p>
+      <PageHeader
+        title="სტუმრები"
+        sub={`${hotel.guests.length} სტუმარი · ${counts.vip} VIP · ${hotel.name}`}
+        action={
+          <button onClick={() => setAddModal(true)} style={addBtn}>
+            <Plus size={14} weight="bold" /> სტუმრის დამატება
+          </button>
+        }
+      />
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 20, alignItems: "center", flexWrap: "wrap" }}>
+        <FilterPills
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { key: "all", label: `ყველა (${enriched.length})` },
+            { key: "active", label: `სასტუმროში (${counts.active})` },
+            { key: "upcoming", label: `მოახლოებული (${counts.upcoming})` },
+            { key: "vip", label: `VIP (${counts.vip})` },
+          ]}
+        />
+        <div style={{ marginLeft: "auto" }}>
+          <SearchBox value={search} onChange={setSearch} placeholder="სახელი, email, ტელეფონი, ქვეყანა..." width={280} />
         </div>
-        <button onClick={() => setAddModal(true)} style={{ background: "var(--acc)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-          <Plus size={14} weight="bold" /> სტუმრის დამატება
-        </button>
       </div>
 
-      {/* Search */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--panel)", border: "1px solid var(--bdr)", borderRadius: 8, padding: "8px 14px", marginBottom: 20, maxWidth: 360 }}>
-        <MagnifyingGlass size={14} color="var(--txt3)" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="სახელი, email ან ქვეყანა..." style={{ border: "none", outline: "none", fontSize: 13, color: "var(--txt)", background: "transparent", width: "100%" }} />
-      </div>
-
-      {/* Table */}
-      <div style={{ background: "var(--panel)", border: "1px solid var(--bdr)", borderRadius: 12, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--bdr)" }}>
-              {["სტუმარი", "კონტაქტი", "ქვეყანა", "ვიზიტები", "სულ დახარჯა", "სტატუსი", ""].map((h) => (
-                <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "var(--txt3)", textTransform: "uppercase", letterSpacing: ".04em" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((g) => {
-              const st = STATUS_MAP[g.status];
-              return (
-                <tr key={g.id} style={{ borderBottom: "1px solid var(--bdr)" }}>
+      <Panel>
+        {filtered.length === 0 ? (
+          <Empty>ვერაფერი მოიძებნა &laquo;{search}&raquo;-ზე</Empty>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--bdr)" }}>
+                {["სტუმარი", "კონტაქტი", "ქვეყანა", "ვიზიტები", "ღამეები", "სულ დახარჯა", "სტატუსი", ""].map((h) => <Th key={h}>{h}</Th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((e) => (
+                <tr key={e.guest.id} style={{ borderBottom: "1px solid var(--bdr)" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--acc-s)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "var(--acc)", flexShrink: 0 }}>
-                        {g.name.charAt(0)}
-                      </div>
+                      <Avatar name={e.guest.name} />
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 500, color: "var(--txt)", display: "flex", alignItems: "center", gap: 5 }}>
-                          {g.name}
-                          {g.vip && <Star size={11} weight="fill" color="#F59E0B" />}
+                          {e.guest.name}
+                          {e.guest.vip && <Star size={11} weight="fill" color="#F59E0B" />}
                         </div>
-                        <div style={{ fontSize: 11, color: "var(--txt3)" }}>{g.id}</div>
+                        <div style={{ fontSize: 11, color: "var(--txt3)" }}>{e.guest.id}</div>
                       </div>
                     </div>
                   </td>
                   <td style={{ padding: "12px 16px" }}>
-                    <div style={{ fontSize: 12, color: "var(--txt2)" }}>{g.phone}</div>
-                    <div style={{ fontSize: 11, color: "var(--txt3)" }}>{g.email}</div>
+                    <div style={{ fontSize: 12, color: "var(--txt2)" }}>{e.guest.phone}</div>
+                    <div style={{ fontSize: 11, color: "var(--txt3)" }}>{e.guest.email}</div>
                   </td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--txt2)" }}>{g.country}</td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--txt)", fontWeight: 600 }}>{g.visits}</td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 600, color: "var(--txt)" }}>{g.spent}</td>
+                  <Td>{e.guest.country}</Td>
+                  <Td strong>{e.visits}</Td>
+                  <Td>{e.nights}</Td>
+                  <Td strong>{gel(e.spent)}</Td>
                   <td style={{ padding: "12px 16px" }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: st.color, background: st.bg, padding: "3px 8px", borderRadius: 999 }}>{st.label}</span>
+                    <Badge tone={e.status === "active" ? RESERVATION_STATUS.in : e.status === "upcoming" ? RESERVATION_STATUS.ok : RESERVATION_STATUS.done}>
+                      {e.status === "active" ? "სასტუმროში" : e.status === "upcoming" ? "მოახლოებული" : "დასრულებული"}
+                    </Badge>
                   </td>
                   <td style={{ padding: "12px 16px" }}>
-                    <button onClick={() => setModal(g)} style={{ fontSize: 12, color: "var(--acc)", background: "var(--acc-s)", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontWeight: 600 }}>
-                      პროფილი
-                    </button>
+                    <button onClick={() => setProfile(e.guest)} style={linkBtn}>პროფილი</button>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Panel>
 
-      {/* Guest profile modal */}
-      {modal && (
-        <Modal onClose={() => setModal(null)}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--acc-s)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "var(--acc)" }}>
-                {modal.name.charAt(0)}
+      {/* Detailed profile */}
+      {detail && (
+        <Modal onClose={() => setProfile(null)} width={560}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+            <Avatar name={detail.guest.name} size={52} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: "var(--txt)", display: "flex", alignItems: "center", gap: 6 }}>
+                {detail.guest.name}
+                {detail.guest.vip && <Star size={14} weight="fill" color="#F59E0B" />}
               </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--txt)", display: "flex", alignItems: "center", gap: 6 }}>
-                  {modal.name}
-                  {modal.vip && <Star size={14} weight="fill" color="#F59E0B" />}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--txt3)" }}>{modal.id} &middot; {modal.country}</div>
+              <div style={{ fontSize: 12, color: "var(--txt3)" }}>
+                {detail.guest.id} &middot; კლიენტი {fmtLong(detail.guest.since)}-დან
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-            {[
-              { Icon: Phone, value: modal.phone },
-              { Icon: EnvelopeSimple, value: modal.email },
-              { Icon: MapPin, value: modal.country },
-            ].map(({ Icon, value }) => (
-              <div key={value} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--txt2)" }}>
-                <Icon size={14} color="var(--txt3)" />
-                {value}
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+            <MiniStat label="ვიზიტი" value={String(detail.visits)} />
+            <MiniStat label="ღამე" value={String(detail.nights)} />
+            <MiniStat label="სულ დახარჯა" value={gel(detail.spent)} />
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+            <Contact Icon={Phone} value={detail.guest.phone} />
+            <Contact Icon={EnvelopeSimple} value={detail.guest.email} />
+            <Contact Icon={MapPin} value={detail.guest.country} />
+            {detail.guest.notes && <Contact Icon={Note} value={detail.guest.notes} />}
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--txt)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+            <Calendar size={14} /> ჯავშნების ისტორია ({detail.bookings.length})
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 220, overflowY: "auto" }}>
+            {detail.bookings.length === 0 && <Empty>ჯავშნები არ არის</Empty>}
+            {detail.bookings.map((b) => (
+              <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--bg)", borderRadius: 8, padding: "9px 12px" }}>
+                <span style={{ width: 3, height: 26, borderRadius: 2, background: b.color, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt)" }}>
+                    ოთახი {b.room} &middot; <span style={{ fontFamily: "monospace", color: "var(--txt3)" }}>{b.id}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--txt3)" }}>
+                    {fmtShort(b.checkin)} → {fmtShort(b.checkout)} &middot; {daysBetween(b.checkin, b.checkout)} ღამე &middot; {b.source}
+                  </div>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--txt)" }}>{gel(b.total)}</span>
+                <Badge tone={RESERVATION_STATUS[b.status]}>{RESERVATION_STATUS[b.status].label}</Badge>
               </div>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, background: "var(--bg)", borderRadius: 10, padding: 16 }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "var(--txt)" }}>{modal.visits}</div>
-              <div style={{ fontSize: 11, color: "var(--txt3)" }}>ვიზიტი</div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "var(--txt)" }}>{modal.spent}</div>
-              <div style={{ fontSize: 11, color: "var(--txt3)" }}>სულ დახარჯა</div>
-            </div>
-          </div>
+
           <ModalActions>
-            <GhostButton onClick={() => setModal(null)}>დახურვა</GhostButton>
-            <PrimaryButton onClick={() => { setBookingFor(modal.name); setModal(null); }}>
+            <GhostButton onClick={() => setProfile(null)}>დახურვა</GhostButton>
+            <PrimaryButton onClick={() => { setBookingFor(detail.guest); setProfile(null); }}>
               ახალი ჯავშანი
             </PrimaryButton>
           </ModalActions>
         </Modal>
       )}
 
-      {/* Add guest modal */}
+      {/* Add guest */}
       {addModal && (
         <Modal onClose={() => setAddModal(false)}>
           <ModalHeader title="სტუმრის დამატება" onClose={() => setAddModal(false)} />
@@ -177,20 +221,18 @@ export default function GuestsPage() {
             <Field label="ტელეფონი" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+995 555 123 456" />
             <Field label="Email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="guest@example.com" />
             <Field label="ქვეყანა" value={form.country} onChange={(v) => setForm({ ...form, country: v })} placeholder="საქართველო" />
+            <Field label="შენიშვნა" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} placeholder="პრეფერენციები, ალერგიები..." />
           </div>
           <ModalActions>
             <GhostButton onClick={() => setAddModal(false)}>გაუქმება</GhostButton>
-            <PrimaryButton onClick={addGuest}>
-              <Check size={14} weight="bold" />შენახვა
-            </PrimaryButton>
+            <PrimaryButton onClick={submit}><Check size={14} weight="bold" />შენახვა</PrimaryButton>
           </ModalActions>
         </Modal>
       )}
 
-      {/* New booking for a guest */}
       {bookingFor && (
         <NewReservationModal
-          initialGuest={bookingFor}
+          initialGuest={bookingFor.name}
           onClose={() => setBookingFor(null)}
           onSave={() => setBookingFor(null)}
         />
@@ -198,3 +240,32 @@ export default function GuestsPage() {
     </div>
   );
 }
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ background: "var(--bg)", borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: "var(--txt)" }}>{value}</div>
+      <div style={{ fontSize: 11, color: "var(--txt3)" }}>{label}</div>
+    </div>
+  );
+}
+
+function Contact({ Icon, value }: { Icon: React.ElementType; value: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: "var(--txt2)" }}>
+      <Icon size={14} color="var(--txt3)" style={{ marginTop: 2, flexShrink: 0 }} />
+      {value}
+    </div>
+  );
+}
+
+const addBtn: React.CSSProperties = {
+  background: "var(--acc)", color: "#fff", border: "none", borderRadius: 8,
+  padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+  display: "flex", alignItems: "center", gap: 6,
+};
+
+const linkBtn: React.CSSProperties = {
+  fontSize: 12, color: "var(--acc)", background: "var(--acc-s)", border: "none",
+  borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontWeight: 600,
+};

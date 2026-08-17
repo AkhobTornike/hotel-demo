@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useHotel } from "@/contexts/HotelContext";
 import {
   SquaresFour,
   CalendarBlank,
@@ -43,11 +44,9 @@ const NAV_SECTIONS = [
   },
 ];
 
-const HOTELS = ["Tbilisi Grand Hotel", "Batumi Seaside Resort"];
-
 export default function Sidebar() {
   const pathname = usePathname();
-  const [hotel, setHotel] = useState(HOTELS[0]);
+  const { hotel, hotels, activeId, setActiveId } = useHotel();
   const [open, setOpen] = useState(false);
 
   return (
@@ -127,8 +126,11 @@ export default function Sidebar() {
               flexShrink: 0,
             }}
           />
-          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--sb-txt)", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {hotel}
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--sb-txt)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {hotel.name}
+            </span>
+            <span style={{ display: "block", fontSize: 10, color: "var(--sb-txt3)" }}>{hotel.city}</span>
           </span>
           <CaretUpDown size={12} color="var(--sb-txt3)" />
         </button>
@@ -140,18 +142,19 @@ export default function Sidebar() {
               padding: 4, boxShadow: "0 10px 30px rgba(0,0,0,.4)",
             }}
           >
-            {HOTELS.map((h) => (
+            {hotels.map((h) => (
               <button
-                key={h}
-                onClick={() => { setHotel(h); setOpen(false); }}
+                key={h.id}
+                onClick={() => { setActiveId(h.id); setOpen(false); }}
                 style={{
                   width: "100%", textAlign: "left", padding: "7px 9px", borderRadius: 6,
                   border: "none", cursor: "pointer", fontSize: 12,
-                  background: h === hotel ? "var(--sb-hov)" : "transparent",
-                  color: h === hotel ? "var(--sb-txt)" : "var(--sb-txt2)",
+                  background: h.id === activeId ? "var(--sb-hov)" : "transparent",
+                  color: h.id === activeId ? "var(--sb-txt)" : "var(--sb-txt2)",
                 }}
               >
-                {h}
+                <span style={{ display: "block", fontWeight: 500 }}>{h.name}</span>
+                <span style={{ display: "block", fontSize: 10, color: "var(--sb-txt3)" }}>{h.city}</span>
               </button>
             ))}
           </div>
