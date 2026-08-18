@@ -48,7 +48,6 @@ export default function DashboardPage() {
       total: 0,
       status: "ok",
       source: "პირდაპირი",
-      color: "#10B981",
     });
     setNewModal(false);
   }

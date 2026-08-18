@@ -93,7 +93,7 @@ export function Td({ children, mono, strong, dim }: { children: React.ReactNode;
     <td style={{
       padding: "12px 16px",
       fontSize: mono || dim ? 12 : 13,
-      fontFamily: mono ? "monospace" : undefined,
+      fontFamily: mono ? "var(--mono)" : undefined,
       fontWeight: strong ? 600 : 400,
       color: dim || mono ? "var(--txt3)" : strong ? "var(--txt)" : "var(--txt2)",
     }}>

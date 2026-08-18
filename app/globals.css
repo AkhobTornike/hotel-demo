@@ -17,6 +17,9 @@
 
 :root {
   --font-firago: 'FiraGO';
+  /* JetBrains Mono carries no ₾ (U+20BE) and no Georgian glyphs — fall through to the
+     UI face for those instead of rendering tofu. Use var(--mono), never --font-mono. */
+  --mono: var(--font-mono), var(--font-ui), ui-monospace, monospace;
   /* Active fonts — overridden by FontContext */
   --font-ui: var(--font-noto-sans-geo);
   --font-latin: var(--font-geist);
@@ -55,6 +58,21 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
+
+/* Every control in the app is keyboard reachable — make that visible. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Inline styles can't express :hover, so the interactive grid pieces get classes. */
+.cal-bar { transition: filter 120ms ease-out, box-shadow 120ms ease-out; }
+.cal-bar:hover { filter: brightness(0.96); }
+.cal-day { transition: background 120ms ease-out; }
+.cal-day:hover { background: rgba(15, 23, 42, .05) !important; }
+.cal-row { transition: background 120ms ease-out; }
+.cal-row:hover { background: var(--bg) !important; }
 
 body {
   /* --font-latin comes first so Latin/digits use the chosen Latin face; it carries no

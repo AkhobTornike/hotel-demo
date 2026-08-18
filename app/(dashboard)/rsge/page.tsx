@@ -96,7 +96,7 @@ export default function RsgePage() {
               {hotel.pendingInvoices.map((p) => (
                 <div key={p.id} style={{ background: "var(--bg)", borderRadius: 10, padding: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, fontFamily: "monospace", color: "var(--txt3)" }}>{p.id}</span>
+                    <span style={{ fontSize: 12, fontFamily: "var(--mono)", color: "var(--txt3)" }}>{p.id}</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: "var(--txt)" }}>{gel(p.amount)}</span>
                   </div>
                   <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 8 }}>{guestName(p.guestId)}</div>

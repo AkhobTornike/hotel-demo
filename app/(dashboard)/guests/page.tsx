@@ -6,7 +6,7 @@ import Modal, { ModalHeader, ModalActions, GhostButton, PrimaryButton, Field } f
 import NewReservationModal from "@/components/NewReservationModal";
 import { Avatar, Badge, Empty, FilterPills, PageHeader, Panel, SearchBox, Td, Th } from "@/components/ui";
 import { useHotel } from "@/contexts/HotelContext";
-import { RESERVATION_STATUS, gel, type Guest } from "@/lib/data";
+import { RESERVATION_BAR, RESERVATION_STATUS, gel, type Guest } from "@/lib/data";
 import { daysBetween, fmtShort, fmtLong } from "@/lib/dates";
 import { matches } from "@/lib/search";
 
@@ -188,10 +188,10 @@ export default function GuestsPage() {
             {detail.bookings.length === 0 && <Empty>ჯავშნები არ არის</Empty>}
             {detail.bookings.map((b) => (
               <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--bg)", borderRadius: 8, padding: "9px 12px" }}>
-                <span style={{ width: 3, height: 26, borderRadius: 2, background: b.color, flexShrink: 0 }} />
+                <span style={{ width: 3, height: 26, borderRadius: 2, background: (RESERVATION_BAR[b.status] ?? RESERVATION_BAR.ok).rule, flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt)" }}>
-                    ოთახი {b.room} &middot; <span style={{ fontFamily: "monospace", color: "var(--txt3)" }}>{b.id}</span>
+                    ოთახი {b.room} &middot; <span style={{ fontFamily: "var(--mono)", color: "var(--txt3)" }}>{b.id}</span>
                   </div>
                   <div style={{ fontSize: 11, color: "var(--txt3)" }}>
                     {fmtShort(b.checkin)} → {fmtShort(b.checkout)} &middot; {daysBetween(b.checkin, b.checkout)} ღამე &middot; {b.source}

@@ -5,6 +5,7 @@ import {
   IBM_Plex_Sans,
   Plus_Jakarta_Sans,
   Geist,
+  JetBrains_Mono,
 } from "next/font/google";
 import { FontProvider } from "@/contexts/FontContext";
 import "./globals.css";
@@ -40,6 +41,13 @@ const ibmPlex = IBM_Plex_Sans({
   variable: "--font-ibm-plex",
   display: "swap",
 });
+/* Tabular data — dates, room numbers, counts. */
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "სასტუმრო OS",
@@ -53,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     geist.variable,
     jakartaSans.variable,
     ibmPlex.variable,
+    jetbrainsMono.variable,
   ].join(" ");
 
   return (

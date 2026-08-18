@@ -35,7 +35,6 @@ export interface Reservation {
   total: number;
   status: ReservationStatus;
   source: string;
-  color: string;
 }
 
 export interface Payment {
@@ -67,11 +66,6 @@ export interface Hotel {
   yearly: { revenue: number; bookings: number; occupancy: string; revpar: string };
 }
 
-const C = {
-  green: "#10B981", blue: "#3B82F6", violet: "#8B5CF6",
-  amber: "#F59E0B", rose: "#EF4444", cyan: "#06B6D4", pink: "#EC4899",
-};
-
 /* ───────────────────────── Tbilisi Grand Hotel ───────────────────────── */
 
 const TBILISI_GUESTS: Guest[] = [
@@ -102,20 +96,20 @@ const TBILISI_ROOMS: Room[] = [
 ];
 
 const TBILISI_RESERVATIONS: Reservation[] = [
-  { id: "JV-1042", guestId: "G-101", room: "204", checkin: "2026-06-28", checkout: "2026-06-30", total: 190, status: "in",     source: "პირდაპირი",   color: C.green },
-  { id: "JV-1041", guestId: "G-102", room: "312", checkin: "2026-06-27", checkout: "2026-06-29", total: 580, status: "in",     source: "Booking.com", color: C.blue },
-  { id: "JV-1040", guestId: "G-103", room: "108", checkin: "2026-06-28", checkout: "2026-07-01", total: 285, status: "in",     source: "Booking.com", color: C.violet },
-  { id: "JV-1039", guestId: "G-104", room: "215", checkin: "2026-06-29", checkout: "2026-07-02", total: 480, status: "ok",     source: "პირდაპირი",   color: C.amber },
-  { id: "JV-1038", guestId: "G-105", room: "401", checkin: "2026-06-30", checkout: "2026-07-03", total: 1650, status: "ok",    source: "ტელეფონი",    color: C.rose },
-  { id: "JV-1037", guestId: "G-106", room: "301", checkin: "2026-07-01", checkout: "2026-07-05", total: 1120, status: "ok",    source: "Airbnb",      color: C.cyan },
-  { id: "JV-1036", guestId: "G-107", room: "102", checkin: "2026-06-25", checkout: "2026-06-27", total: 180, status: "done",   source: "პირდაპირი",   color: C.green },
-  { id: "JV-1035", guestId: "G-108", room: "303", checkin: "2026-06-20", checkout: "2026-06-23", total: 465, status: "done",   source: "Booking.com", color: C.cyan },
-  { id: "JV-1034", guestId: "G-101", room: "101", checkin: "2026-06-10", checkout: "2026-06-12", total: 180, status: "done",   source: "პირდაპირი",   color: C.green },
-  { id: "JV-1033", guestId: "G-103", room: "201", checkin: "2026-06-05", checkout: "2026-06-08", total: 285, status: "cancel", source: "Booking.com", color: C.violet },
-  { id: "JV-1032", guestId: "G-104", room: "301", checkin: "2026-05-18", checkout: "2026-05-21", total: 840, status: "done",   source: "პირდაპირი",   color: C.amber },
-  { id: "JV-1031", guestId: "G-109", room: "104", checkin: "2026-06-24", checkout: "2026-06-26", total: 300, status: "done",   source: "ტელეფონი",    color: C.pink },
-  { id: "JV-1030", guestId: "G-101", room: "215", checkin: "2026-04-02", checkout: "2026-04-05", total: 480, status: "done",   source: "პირდაპირი",   color: C.green },
-  { id: "JV-1029", guestId: "G-104", room: "401", checkin: "2026-03-14", checkout: "2026-03-16", total: 1100, status: "done",  source: "პირდაპირი",   color: C.amber },
+  { id: "JV-1042", guestId: "G-101", room: "204", checkin: "2026-06-28", checkout: "2026-06-30", total: 190, status: "in",     source: "პირდაპირი" },
+  { id: "JV-1041", guestId: "G-102", room: "312", checkin: "2026-06-27", checkout: "2026-06-29", total: 580, status: "in",     source: "Booking.com" },
+  { id: "JV-1040", guestId: "G-103", room: "108", checkin: "2026-06-28", checkout: "2026-07-01", total: 285, status: "in",     source: "Booking.com" },
+  { id: "JV-1039", guestId: "G-104", room: "215", checkin: "2026-06-29", checkout: "2026-07-02", total: 480, status: "ok",     source: "პირდაპირი" },
+  { id: "JV-1038", guestId: "G-105", room: "401", checkin: "2026-06-30", checkout: "2026-07-03", total: 1650, status: "ok",    source: "ტელეფონი" },
+  { id: "JV-1037", guestId: "G-106", room: "301", checkin: "2026-07-01", checkout: "2026-07-05", total: 1120, status: "ok",    source: "Airbnb" },
+  { id: "JV-1036", guestId: "G-107", room: "102", checkin: "2026-06-25", checkout: "2026-06-27", total: 180, status: "done",   source: "პირდაპირი" },
+  { id: "JV-1035", guestId: "G-108", room: "303", checkin: "2026-06-20", checkout: "2026-06-23", total: 465, status: "done",   source: "Booking.com" },
+  { id: "JV-1034", guestId: "G-101", room: "101", checkin: "2026-06-10", checkout: "2026-06-12", total: 180, status: "done",   source: "პირდაპირი" },
+  { id: "JV-1033", guestId: "G-103", room: "201", checkin: "2026-06-05", checkout: "2026-06-08", total: 285, status: "cancel", source: "Booking.com" },
+  { id: "JV-1032", guestId: "G-104", room: "301", checkin: "2026-05-18", checkout: "2026-05-21", total: 840, status: "done",   source: "პირდაპირი" },
+  { id: "JV-1031", guestId: "G-109", room: "104", checkin: "2026-06-24", checkout: "2026-06-26", total: 300, status: "done",   source: "ტელეფონი" },
+  { id: "JV-1030", guestId: "G-101", room: "215", checkin: "2026-04-02", checkout: "2026-04-05", total: 480, status: "done",   source: "პირდაპირი" },
+  { id: "JV-1029", guestId: "G-104", room: "401", checkin: "2026-03-14", checkout: "2026-03-16", total: 1100, status: "done",  source: "პირდაპირი" },
 ];
 
 const TBILISI_PAYMENTS: Payment[] = [
@@ -159,18 +153,18 @@ const BATUMI_ROOMS: Room[] = [
 ];
 
 const BATUMI_RESERVATIONS: Reservation[] = [
-  { id: "BT-2051", guestId: "B-201", room: "C-33", checkin: "2026-06-22", checkout: "2026-07-06", total: 5880, status: "in",     source: "პირდაპირი",   color: C.rose },
-  { id: "BT-2050", guestId: "B-202", room: "B-24", checkin: "2026-06-26", checkout: "2026-07-03", total: 2240, status: "in",     source: "Booking.com", color: C.blue },
-  { id: "BT-2049", guestId: "B-203", room: "B-21", checkin: "2026-06-28", checkout: "2026-07-12", total: 2940, status: "in",     source: "პირდაპირი",   color: C.violet },
-  { id: "BT-2048", guestId: "B-204", room: "A-11", checkin: "2026-06-27", checkout: "2026-06-30", total: 360,  status: "in",     source: "ტელეფონი",    color: C.green },
-  { id: "BT-2047", guestId: "B-205", room: "C-31", checkin: "2026-06-30", checkout: "2026-07-04", total: 1680, status: "ok",     source: "Airbnb",      color: C.amber },
-  { id: "BT-2046", guestId: "B-206", room: "D-41", checkin: "2026-07-02", checkout: "2026-07-06", total: 3120, status: "ok",     source: "Booking.com", color: C.cyan },
-  { id: "BT-2045", guestId: "B-207", room: "D-42", checkin: "2026-07-04", checkout: "2026-07-07", total: 1350, status: "ok",     source: "პირდაპირი",   color: C.pink },
-  { id: "BT-2044", guestId: "B-208", room: "A-14", checkin: "2026-06-22", checkout: "2026-06-26", total: 760,  status: "done",   source: "Booking.com", color: C.blue },
-  { id: "BT-2043", guestId: "B-203", room: "B-22", checkin: "2026-05-30", checkout: "2026-06-06", total: 1470, status: "done",   source: "პირდაპირი",   color: C.violet },
-  { id: "BT-2042", guestId: "B-201", room: "C-33", checkin: "2026-05-02", checkout: "2026-05-09", total: 2940, status: "done",   source: "პირდაპირი",   color: C.rose },
-  { id: "BT-2041", guestId: "B-207", room: "C-35", checkin: "2026-06-12", checkout: "2026-06-15", total: 1020, status: "done",   source: "პირდაპირი",   color: C.pink },
-  { id: "BT-2040", guestId: "B-202", room: "B-24", checkin: "2026-04-20", checkout: "2026-04-25", total: 1600, status: "cancel", source: "Booking.com", color: C.blue },
+  { id: "BT-2051", guestId: "B-201", room: "C-33", checkin: "2026-06-22", checkout: "2026-07-06", total: 5880, status: "in",     source: "პირდაპირი" },
+  { id: "BT-2050", guestId: "B-202", room: "B-24", checkin: "2026-06-26", checkout: "2026-07-03", total: 2240, status: "in",     source: "Booking.com" },
+  { id: "BT-2049", guestId: "B-203", room: "B-21", checkin: "2026-06-28", checkout: "2026-07-12", total: 2940, status: "in",     source: "პირდაპირი" },
+  { id: "BT-2048", guestId: "B-204", room: "A-11", checkin: "2026-06-27", checkout: "2026-06-30", total: 360,  status: "in",     source: "ტელეფონი" },
+  { id: "BT-2047", guestId: "B-205", room: "C-31", checkin: "2026-06-30", checkout: "2026-07-04", total: 1680, status: "ok",     source: "Airbnb" },
+  { id: "BT-2046", guestId: "B-206", room: "D-41", checkin: "2026-07-02", checkout: "2026-07-06", total: 3120, status: "ok",     source: "Booking.com" },
+  { id: "BT-2045", guestId: "B-207", room: "D-42", checkin: "2026-07-04", checkout: "2026-07-07", total: 1350, status: "ok",     source: "პირდაპირი" },
+  { id: "BT-2044", guestId: "B-208", room: "A-14", checkin: "2026-06-22", checkout: "2026-06-26", total: 760,  status: "done",   source: "Booking.com" },
+  { id: "BT-2043", guestId: "B-203", room: "B-22", checkin: "2026-05-30", checkout: "2026-06-06", total: 1470, status: "done",   source: "პირდაპირი" },
+  { id: "BT-2042", guestId: "B-201", room: "C-33", checkin: "2026-05-02", checkout: "2026-05-09", total: 2940, status: "done",   source: "პირდაპირი" },
+  { id: "BT-2041", guestId: "B-207", room: "C-35", checkin: "2026-06-12", checkout: "2026-06-15", total: 1020, status: "done",   source: "პირდაპირი" },
+  { id: "BT-2040", guestId: "B-202", room: "B-24", checkin: "2026-04-20", checkout: "2026-04-25", total: 1600, status: "cancel", source: "Booking.com" },
 ];
 
 const BATUMI_PAYMENTS: Payment[] = [
@@ -280,6 +274,19 @@ export const PAYMENT_STATUS: Record<string, { label: string; color: string; bg: 
   paid:    { label: "გადახდილი",   color: "var(--acc-txt)",  bg: "var(--acc-s)" },
   pending: { label: "მოლოდინში",   color: "var(--amb-txt)",  bg: "var(--amb-s)" },
   refund:  { label: "დაბრუნებული", color: "var(--blue-txt)", bg: "var(--blue-s)" },
+};
+
+/**
+ * Calendar bar tones. Colour encodes booking STATUS, not identity — a front desk
+ * needs "who is still to arrive?" at a glance. Adjacent bookings stay separable
+ * via the gutter, hairline and left rule rather than by hue. Dark text on a light
+ * tint clears WCAG AA at 11px, which white-on-saturated never did.
+ */
+export const RESERVATION_BAR: Record<string, { bg: string; rule: string; txt: string }> = {
+  in:     { bg: "#C7EDDD", rule: "#047857", txt: "#064E3B" },
+  ok:     { bg: "#D3E3FD", rule: "#1D4ED8", txt: "#1E3A8A" },
+  done:   { bg: "#E5E9EF", rule: "#94A3B8", txt: "#475569" },
+  cancel: { bg: "#FBD9D9", rule: "#DC2626", txt: "#991B1B" },
 };
 
 export const ROOM_TYPES = ["სტანდარტი", "დელუქსი", "ფემილი", "სუიტი", "პენტჰაუსი"];

@@ -100,7 +100,7 @@ export default function RoomsPage() {
                 background: "var(--panel)", border: `1.5px solid ${st.dot}`,
                 borderRadius: 12, padding: 16, cursor: "pointer",
               }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: "var(--txt)", marginBottom: 2, fontFamily: "monospace" }}>{r.id}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "var(--txt)", marginBottom: 2, fontFamily: "var(--mono)" }}>{r.id}</div>
                 <div style={{ fontSize: 11, color: "var(--txt3)", marginBottom: 8 }}>
                   {r.type} &middot; {r.capacity} სტ. &middot; {r.floor} სართ.
                 </div>
@@ -125,7 +125,7 @@ export default function RoomsPage() {
       {modal && (
         <Modal onClose={() => setModal(null)} width={420}>
           <ModalHeader
-            title={<span style={{ fontSize: 24, fontWeight: 800, fontFamily: "monospace" }}>ოთახი {modal.id}</span>}
+            title={<span style={{ fontSize: 24, fontWeight: 800, fontFamily: "var(--mono)" }}>ოთახი {modal.id}</span>}
             sub={`${modal.type} · ${modal.floor} სართული · ${modal.view}`}
             onClose={() => setModal(null)}
           />
